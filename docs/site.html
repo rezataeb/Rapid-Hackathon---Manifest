@@ -1,0 +1,283 @@
+<title>Backup Host</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a host-stand console. Hero thesis + outage lamp, then a live 5-step demo (book + event feed), then workflow lanes, sync rules, tradeoffs. */
+:root{
+  --bg:#F1F3F2; --surface:#FFFFFF; --sunk:#E6EAE8; --ink:#15202B; --muted:#56616B; --line:#D5DBD9;
+  --accent:#D9822B; --accent-ink:#8A4A0E; --accent-soft:#F8E6D2;
+  --ok:#2D7A57; --ok-soft:#DDEFE5; --warn:#B4472A; --warn-soft:#F7E0D8; --info:#38598A; --info-soft:#DFE7F3;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1519; --surface:#162027; --sunk:#1C2830; --ink:#E7ECEA; --muted:#9BA7AE; --line:#29363E;
+  --accent:#F0A04B; --accent-ink:#F3B36E; --accent-soft:#3A2814;
+  --ok:#62C496; --ok-soft:#173226; --warn:#F28D6E; --warn-soft:#3B1E16; --info:#93B3E3; --info-soft:#1B2A40; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1519; --surface:#162027; --sunk:#1C2830; --ink:#E7ECEA; --muted:#9BA7AE; --line:#29363E;
+  --accent:#F0A04B; --accent-ink:#F3B36E; --accent-soft:#3A2814;
+  --ok:#62C496; --ok-soft:#173226; --warn:#F28D6E; --warn-soft:#3B1E16; --info:#93B3E3; --info-soft:#1B2A40; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:17px/1.55 var(--body);padding-inline:20px;padding-block:0 64px}
+.wrap{max-width:1160px;margin:0 auto;display:flex;flex-direction:column;gap:88px}
+h1,h2,h3{font-family:var(--display);font-stretch:112%;margin:0;text-wrap:balance;letter-spacing:-0.01em}
+h1{font-size:clamp(2.4rem,5.4vw,4.1rem);line-height:1.02;font-weight:800}
+h2{font-size:clamp(1.6rem,3vw,2.2rem);line-height:1.1;font-weight:750}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0}
+.eyebrow{font:600 .75rem/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent-ink)}
+.lede{font-size:1.2rem;color:var(--muted);max-width:60ch}
+.sec-head{display:flex;flex-direction:column;gap:12px;max-width:68ch}
+a{color:var(--info)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:48px;align-items:center;padding-top:72px}
+.hero-text{display:flex;flex-direction:column;gap:22px;min-width:0}
+.facts{display:flex;flex-wrap:wrap;gap:10px 28px;font:600 .9rem/1.3 var(--mono);color:var(--muted)}
+.facts b{color:var(--ink);font-size:1.5rem;font-family:var(--display);font-stretch:112%;display:block}
+.stand{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:16px;font-family:var(--mono);font-size:.88rem;min-width:0}
+.lamp-row{display:flex;align-items:center;gap:12px;font-weight:600;letter-spacing:.06em}
+.lamp{width:14px;height:14px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 6px var(--accent-soft);flex:none}
+@media (prefers-reduced-motion:no-preference){.lamp.live{animation:pulse 1.6s ease-in-out infinite}}
+@keyframes pulse{50%{box-shadow:0 0 0 11px transparent}}
+.lamp.ok{background:var(--ok);box-shadow:0 0 0 6px var(--ok-soft)}
+.stand dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 16px}
+.stand dt{color:var(--muted)} .stand dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.stand hr{border:0;border-top:1px dashed var(--line);margin:0}
+
+/* demo */
+.steps{display:flex;flex-wrap:wrap;gap:8px}
+.step{font:600 .92rem/1.2 var(--body);display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;min-height:44px}
+.step .n{font:600 .78rem/1 var(--mono);width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--sunk);color:var(--muted);flex:none}
+.step[aria-current="step"]{border-color:var(--accent);background:var(--accent-soft)}
+.step[aria-current="step"] .n,.step.done .n{background:var(--accent);color:#1A1006}
+.step:hover{border-color:var(--accent)}
+.console{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:20px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;min-width:0}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;padding:16px 18px;border-bottom:1px solid var(--line)}
+.panel-head p{color:var(--muted);font-size:.95rem}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-bottom:1px solid var(--line)}
+.stat{padding:12px 16px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat span{font:600 .7rem/1.2 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.stat b{font:750 1.6rem/1.1 var(--display);font-stretch:112%;font-variant-numeric:tabular-nums}
+.stat.zero b{color:var(--ok)}
+.tbl-box{overflow-x:auto;max-height:520px;overflow-y:auto}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th{position:sticky;top:0;background:var(--surface);text-align:left;font:600 .7rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--line)}
+td{padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.new td{background:var(--accent-soft)}
+.note{display:block;font-size:.82rem;color:var(--warn)}
+.src{font:.75rem/1.3 var(--mono);color:var(--muted)}
+.chip{display:inline-block;font:600 .74rem/1 var(--mono);padding:5px 8px;border-radius:999px;white-space:nowrap}
+.c-ok{background:var(--ok-soft);color:var(--ok)} .c-warn{background:var(--warn-soft);color:var(--warn)}
+.c-info{background:var(--info-soft);color:var(--info)} .c-mute{background:var(--sunk);color:var(--muted)}
+.c-acc{background:var(--accent-soft);color:var(--accent-ink)}
+.feed{list-style:none;margin:0;padding:8px 0;max-height:640px;overflow-y:auto}
+.feed li{padding:10px 18px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;border-bottom:1px solid var(--line);font-size:.92rem}
+.feed li:last-child{border-bottom:0}
+.feed time{font:.78rem/1.6 var(--mono);color:var(--muted)}
+.feed .k{grid-column:2}
+.actions{display:flex;gap:10px;flex-wrap:wrap;padding:14px 18px;border-top:1px solid var(--line)}
+.btn{font:600 .95rem/1 var(--body);padding:12px 18px;border-radius:10px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer;min-height:44px}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* lanes */
+.lanes{display:flex;flex-direction:column;gap:14px}
+.lane{display:grid;grid-template-columns:180px minmax(0,1fr);gap:18px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.lane h3{font-size:.95rem} .lane small{display:block;font:.75rem/1.4 var(--mono);color:var(--muted)}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0}
+.chain span{padding:7px 11px;border-radius:8px;background:var(--sunk);font-size:.9rem}
+.chain span.h{background:var(--ink);color:var(--bg)}
+.chain span.d{background:var(--warn-soft);color:var(--warn)}
+.chain i{font-style:normal;color:var(--muted)}
+
+/* rules */
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;counter-reset:r}
+.rule{padding:20px;border-top:3px solid var(--accent);background:var(--surface);border-radius:0 0 12px 12px;display:flex;flex-direction:column;gap:8px}
+.rule p{color:var(--muted);font-size:.97rem}
+.race{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface)}
+.race div{padding:18px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.race div:last-child{border-right:0}
+.race time{font:600 .8rem/1 var(--mono);color:var(--accent-ink)}
+.race p{font-size:.95rem}
+
+.tt{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.tt td,.tt th{padding:12px 16px} .tt td:first-child{font-weight:600}
+footer{border-top:1px solid var(--line);padding-top:28px;display:flex;flex-wrap:wrap;gap:12px 40px;color:var(--muted);font-size:.92rem}
+footer b{color:var(--ink)}
+
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr;padding-top:40px}
+  .console{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .stat:nth-child(3){border-right:0}
+  .stat:nth-child(n+4){border-top:1px solid var(--line)}
+  .lane{grid-template-columns:1fr}
+  .wrap{gap:64px}
+}
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <div class="hero-text">
+    <span class="eyebrow">Restaurant outage agent</span>
+    <h1>Resy is down at 2 PM. Service starts at 5:30.</h1>
+    <p class="lede">Backup Host rebuilds tonight's book from the inbox, the printout, and the voicemail. It confirms every guest, takes new bookings, and puts the night back into Resy with zero double bookings.</p>
+    <div class="facts">
+      <div><b>23 → 17</b>records → bookings</div>
+      <div><b>2</b>table conflicts caught</div>
+      <div><b>0</b>double bookings</div>
+    </div>
+  </div>
+  <aside class="stand" aria-label="Host stand status">
+    <div class="lamp-row"><span class="lamp live" id="lamp"></span><span id="lampText">RESY · OFFLINE SINCE 2:04 PM</span></div>
+    <hr>
+    <dl>
+      <dt>Service starts</dt><dd>5:30 PM</dd>
+      <dt>Tonight's covers</dt><dd id="covers">—</dd>
+      <dt>Sources</dt><dd>Email · printout · voicemail</dd>
+      <dt>Mode</dt><dd id="modeText">Outage</dd>
+    </dl>
+    <hr>
+    <p style="color:var(--muted)">Every number on this page comes from the tested prototype run on sample data.</p>
+  </aside>
+</header>
+
+<section id="demo" style="display:flex;flex-direction:column;gap:22px">
+  <div class="sec-head">
+    <span class="eyebrow">Live demo</span>
+    <h2>Run the outage, one step at a time</h2>
+    <p class="lede">Click each step. The book and the event feed update the same way they do in the prototype.</p>
+  </div>
+  <nav class="steps" aria-label="Demo steps" id="steps"></nav>
+  <div class="console">
+    <div class="panel">
+      <div class="panel-head"><h3 id="stepTitle">Tonight's book</h3><p id="stepSub"></p></div>
+      <div class="stats" id="stats"></div>
+      <div class="tbl-box"><table id="book"><thead><tr><th>Time</th><th>Guest</th><th>Party</th><th>Table</th><th>Status</th><th>Source</th></tr></thead><tbody></tbody></table></div>
+      <div class="actions"><button class="btn ghost" id="prev" type="button">Back</button><button class="btn" id="next" type="button">Next step</button></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Event feed</h3><p>Newest first</p></div>
+      <ul class="feed" id="feed"></ul>
+    </div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:22px">
+  <div class="sec-head">
+    <span class="eyebrow">Workflow</span>
+    <h2>Three modes and one inbound flow</h2>
+    <p class="lede">The manager changes the mode. The system can alert, but it never changes the mode by itself.</p>
+  </div>
+  <div class="lanes">
+    <div class="lane"><div><h3>Normal</h3><small>always on</small></div><div class="chain"><span>Resy email</span><i>→</i><span>Parse: templates, then Claude</span><i>→</i><span>Upsert booking</span><i>→</i><span>Sheet mirror</span><i>→</i><span>Health check: 45 min with no email</span><i>→</i><span>Alert manager</span></div></div>
+    <div class="lane"><div><h3>Outage</h3><small>Resy is down</small></div><div class="chain"><span class="h">Manager: “Resy is down”</span><i>→</i><span>Rebuild book</span><i>→</i><span>Call queue</span><i>→</i><span>AI call or SMS</span><i>→</i><span>Confirm · cancel · modify</span><i>→</i><span class="d">Hard case → host</span></div></div>
+    <div class="lane"><div><h3>Inbound</h3><small>guest calls back</small></div><div class="chain"><span>Guest calls</span><i>→</i><span>Agent answers if host is busy</span><i>→</i><span>Find booking by caller ID</span><i>→</i><span>Confirm name first</span><i>→</i><span>Same tools, same rules</span></div></div>
+    <div class="lane"><div><h3>Recovery</h3><small>Resy is back</small></div><div class="chain"><span class="h">Manager: “Resy is back”</span><i>→</i><span>Block outage slots in Resy</span><i>→</i><span>Cancel → modify → create</span><i>→</i><span>Fresh check</span><i>→</i><span>Enter with ref code</span><i>→</i><span class="d">Mismatch → manager</span><i>→</i><span>Win-back by SMS</span></div></div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:22px">
+  <div class="sec-head">
+    <span class="eyebrow">Putting the night back into Resy</span>
+    <h2>Resy can come back with no warning</h2>
+    <p class="lede">When Resy returns, online bookings start again at once. A web guest can take the same table that an outage guest already has. Backup Host checks before every write.</p>
+  </div>
+  <div class="race">
+    <div><time>6:58 PM</time><p>Resy comes back online.</p></div>
+    <div><time>6:58 PM</time><p>A web guest books the last 4-top at 7:00 PM.</p></div>
+    <div><time>6:59 PM</time><p>Sync tries to add Leila Ahmadi, party of 4 at 7:00 PM, booked by phone during the outage.</p></div>
+    <div><time>6:59 PM</time><p><b>Conflict, not a double booking.</b> The host offers Leila 8:30 PM.</p></div>
+  </div>
+  <div class="rules">
+    <div class="rule"><h3>Record, do not write</h3><p>During the outage, each change is an operation in a log. Nothing goes to Resy until it is back.</p></div>
+    <div class="rule"><h3>Cancels first</h3><p>Cancels free tables, then changes, then new bookings. The order prevents false conflicts.</p></div>
+    <div class="rule"><h3>Check, then write</h3><p>Before each write, the agent reads Resy again. If a guest changed it online, a human decides.</p></div>
+    <div class="rule"><h3>Retry-safe</h3><p>Each operation has a ref code in the Resy notes. A second sync run makes no duplicate.</p></div>
+    <div class="rule"><h3>Verify</h3><p>After the sync, the agent reads Resy one more time and confirms each change is there.</p></div>
+    <div class="rule"><h3>Honest about Resy</h3><p>Without a write API, the same rules drive a checklist that staff enter by hand and tick off.</p></div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:22px">
+  <div class="sec-head">
+    <span class="eyebrow">Tradeoffs</span>
+    <h2>What we chose, and why</h2>
+  </div>
+  <div class="tt"><table>
+    <thead><tr><th>Choice</th><th>Benefit</th><th>Risk</th><th>Control</th></tr></thead>
+    <tbody>
+      <tr><td>Rebuild from emails</td><td>Fast, high coverage</td><td>Bookings after the last email are missing</td><td>Confidence flag per booking, 10% walk-in buffer</td></tr>
+      <tr><td>SMS before calls</td><td>Cheap, fast replies</td><td>Some guests do not reply</td><td>Call list for staff after 30 minutes</td></tr>
+      <tr><td>AI voice agent</td><td>Handles many calls</td><td>Can mishear names or times</td><td>Reads back every booking, sends an SMS copy</td></tr>
+      <tr><td>New bookings during the outage</td><td>Keeps revenue</td><td>Double booking when Resy returns</td><td>“Pending” status, fresh check before each write</td></tr>
+      <tr><td>Human decides conflicts</td><td>No silent overwrites</td><td>Slower recovery</td><td>Most items sync with no decision needed</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>
+  <p><b>Built with</b> Python, Streamlit, and the Claude API for email extraction. Twilio-ready SMS.</p>
+  <p><b>Built by</b> a team of 4 in a 45-minute hackathon round.</p>
+  <p><b>Demo data</b> Sample guests and numbers. No real customer data.</p>
+</footer>
+</div>
+
+<script>
+const D = {"records":23,"s1":[{"time":"17:30","name":"James Chen","party":2,"table":"T1","status":"unconfirmed","conflict":"","conf":"high","src":["printout","email"]},{"time":"17:30","name":"Yuki Tanaka","party":4,"table":"T5","status":"unconfirmed","conflict":"","conf":"medium","src":["printout"]},{"time":"18:00","name":"Rachel Moore","party":4,"table":"T6","status":"unconfirmed","conflict":"","conf":"low","src":["voicemail"]},{"time":"18:00","name":"Tom Becker","party":2,"table":"T2","status":"unconfirmed","conflict":"","conf":"medium","src":["printout"]},{"time":"18:30","name":"Sofia Rossi","party":4,"table":"T7","status":"unconfirmed","conflict":"","conf":"high","src":["email"]},{"time":"19:00","name":"Fatima Nasser","party":6,"table":"T10","status":"unconfirmed","conflict":"","conf":"high","src":["email"]},{"time":"19:00","name":"Grace Lee","party":4,"table":"T9","status":"unconfirmed","conflict":"","conf":"high","src":["email"]},{"time":"19:00","name":"Maria Lopez","party":4,"table":"T8","status":"unconfirmed","conflict":"","conf":"high","src":["printout","email"]},{"time":"19:00","name":"Noah Williams","party":8,"table":"T12","status":"unconfirmed","conflict":"","conf":"high","src":["email"]},{"time":"19:00","name":"Priya Patel","party":2,"table":null,"status":"cancelled","conflict":"","conf":"high","src":["email"]},{"time":"19:30","name":"Omar Haddad","party":6,"table":"T11","status":"unconfirmed","conflict":"","conf":"high","src":["email"]},{"time":"20:00","name":"Aisha Rahman","party":6,"table":null,"status":"unconfirmed","conflict":"No free table for 6 at 20:00","conf":"high","src":["email"]},{"time":"20:30","name":"Daniel Kim","party":2,"table":"T2","status":"unconfirmed","conflict":"","conf":"low","src":["voicemail"]},{"time":"20:30","name":"Emma Davis","party":2,"table":"T1","status":"unconfirmed","conflict":"","conf":"high","src":["printout","email"]},{"time":"20:30","name":"Liam O'Brien","party":5,"table":null,"status":"unconfirmed","conflict":"No free table for 5 at 20:30","conf":"high","src":["email"]},{"time":"21:00","name":"Carlos Mendez","party":4,"table":"T5","status":"unconfirmed","conflict":"","conf":"high","src":["email"]},{"time":"21:30","name":"Hannah Goldberg","party":2,"table":"T3","status":"unconfirmed","conflict":"","conf":"high","src":["email"]}],"replies":[["James Chen","YES"],["Yuki Tanaka","YES"],["Tom Becker","NO"],["Maria Lopez","YES"],["Emma Davis","YES"],["Sofia Rossi","YES"],["Liam O'Brien","YES"],["Carlos Mendez","YES"],["Fatima Nasser","YES"],["Grace Lee","YES"],["Omar Haddad","YES"],["Daniel Kim","NO"],["Rachel Moore","NO"]],"s2":[{"time":"17:30","name":"James Chen","party":2,"table":"T1","status":"confirmed","conflict":"","conf":"high","src":["printout","email"]},{"time":"17:30","name":"Yuki Tanaka","party":4,"table":"T5","status":"confirmed","conflict":"","conf":"medium","src":["printout"]},{"time":"18:00","name":"Rachel Moore","party":4,"table":null,"status":"cancelled","conflict":"","conf":"low","src":["voicemail"]},{"time":"18:00","name":"Tom Becker","party":2,"table":null,"status":"cancelled","conflict":"","conf":"medium","src":["printout"]},{"time":"18:30","name":"Sofia Rossi","party":4,"table":"T6","status":"confirmed","conflict":"","conf":"high","src":["email"]},{"time":"19:00","name":"Fatima Nasser","party":6,"table":"T10","status":"confirmed","conflict":"","conf":"high","src":["email"]},{"time":"19:00","name":"Grace Lee","party":4,"table":"T8","status":"confirmed","conflict":"","conf":"high","src":["email"]},{"time":"19:00","name":"Maria Lopez","party":4,"table":"T7","status":"confirmed","conflict":"","conf":"high","src":["printout","email"]},{"time":"19:00","name":"Noah Williams","party":8,"table":"T12","status":"no reply - call","conflict":"","conf":"high","src":["email"]},{"time":"19:00","name":"Priya Patel","party":2,"table":null,"status":"cancelled","conflict":"","conf":"high","src":["email"]},{"time":"19:30","name":"Omar Haddad","party":6,"table":"T11","status":"confirmed","conflict":"","conf":"high","src":["email"]},{"time":"20:00","name":"Aisha Rahman","party":6,"table":null,"status":"no reply - call","conflict":"No free table for 6 at 20:00","conf":"high","src":["email"]},{"time":"20:30","name":"Daniel Kim","party":2,"table":null,"status":"cancelled","conflict":"","conf":"low","src":["voicemail"]},{"time":"20:30","name":"Emma Davis","party":2,"table":"T1","status":"confirmed","conflict":"","conf":"high","src":["printout","email"]},{"time":"20:30","name":"Liam O'Brien","party":5,"table":null,"status":"confirmed","conflict":"No free table for 5 at 20:30","conf":"high","src":["email"]},{"time":"21:00","name":"Carlos Mendez","party":4,"table":"T5","status":"confirmed","conflict":"","conf":"high","src":["email"]},{"time":"21:30","name":"Hannah Goldberg","party":2,"table":"T2","status":"no reply - call","conflict":"","conf":"high","src":["email"]}],"s3":[{"time":"17:30","name":"James Chen","party":2,"table":"T1","status":"confirmed","conflict":"","conf":"high","src":["printout","email"]},{"time":"17:30","name":"Yuki Tanaka","party":4,"table":"T5","status":"confirmed","conflict":"","conf":"medium","src":["printout"]},{"time":"18:00","name":"Rachel Moore","party":4,"table":null,"status":"cancelled","conflict":"","conf":"low","src":["voicemail"]},{"time":"18:00","name":"Tom Becker","party":2,"table":null,"status":"cancelled","conflict":"","conf":"medium","src":["printout"]},{"time":"18:30","name":"Sofia Rossi","party":4,"table":"T6","status":"confirmed","conflict":"","conf":"high","src":["email"]},{"time":"19:00","name":"Fatima Nasser","party":6,"table":"T10","status":"confirmed","conflict":"","conf":"high","src":["email"]},{"time":"19:00","name":"Grace Lee","party":4,"table":"T8","status":"confirmed","conflict":"","conf":"high","src":["email"]},{"time":"19:00","name":"Leila Ahmadi","party":4,"table":"T9","status":"pending","conflict":"","conf":"medium","src":["phone agent"]},{"time":"19:00","name":"Maria Lopez","party":4,"table":"T7","status":"confirmed","conflict":"","conf":"high","src":["printout","email"]},{"time":"19:00","name":"Noah Williams","party":8,"table":"T12","status":"no reply - call","conflict":"","conf":"high","src":["email"]},{"time":"19:00","name":"Priya Patel","party":2,"table":null,"status":"cancelled","conflict":"","conf":"high","src":["email"]},{"time":"19:30","name":"Omar Haddad","party":6,"table":"T11","status":"confirmed","conflict":"","conf":"high","src":["email"]},{"time":"20:00","name":"Aisha Rahman","party":6,"table":null,"status":"no reply - call","conflict":"No free table for 6 at 20:00","conf":"high","src":["email"]},{"time":"20:30","name":"Daniel Kim","party":2,"table":null,"status":"cancelled","conflict":"","conf":"low","src":["voicemail"]},{"time":"20:30","name":"Emma Davis","party":2,"table":"T1","status":"confirmed","conflict":"","conf":"high","src":["printout","email"]},{"time":"20:30","name":"Liam O'Brien","party":5,"table":null,"status":"confirmed","conflict":"No free table for 5 at 20:30","conf":"high","src":["email"]},{"time":"21:00","name":"Carlos Mendez","party":4,"table":"T5","status":"confirmed","conflict":"","conf":"high","src":["email"]},{"time":"21:30","name":"Hannah Goldberg","party":2,"table":"T2","status":"no reply - call","conflict":"","conf":"high","src":["email"]}],"leila_table":"T9","web":"R018","ops":[{"kind":"cancel","name":"Tom Becker","party":2,"time":"18:00","status":"conflict","result":"Guest changed it in Resy (2 at 18:15). Host must decide.","op":"BH-ff1152d0"},{"kind":"cancel","name":"Daniel Kim","party":2,"time":"20:30","status":"synced","result":"Cancelled R013 in Resy","op":"BH-1a32b152"},{"kind":"cancel","name":"Rachel Moore","party":4,"time":"18:00","status":"skipped","result":"Already cancelled in Resy","op":"BH-e7c52a1d"},{"kind":"create","name":"Leila Ahmadi","party":4,"time":"19:00","status":"conflict","result":"No table for 4 at 19:00 in Resy. Offer the guest 20:30.","op":"BH-c4843679"}],"recon":[{"guest":"Ben Carter","issue":"Only in Resy","detail":"2 at 18:30","proposed action":"Add to tonight's book"},{"guest":"Hannah Goldberg","issue":"Status differs","detail":"Resy: cancelled / backup: no reply - call","proposed action":"Cancel in backup"},{"guest":"Leila Ahmadi","issue":"Only in backup","detail":"4 at 19:00 (phone agent)","proposed action":"Create in Resy"},{"guest":"Tom Becker","issue":"Status differs","detail":"Resy: booked / backup: cancelled","proposed action":"Re-activate in backup"},{"guest":"Web Guest","issue":"Only in Resy","detail":"4 at 19:00","proposed action":"Add to tonight's book"}]};
+const t12 = t => { let [h,m]=t.split(':').map(Number); return ((h+11)%12+1)+':'+String(m).padStart(2,'0')+(h>=12?' PM':' AM'); };
+const SRC = {email:'email',printout:'printout',voicemail:'voicemail','phone agent':'phone agent'};
+function chip(s){
+  const map={unconfirmed:['c-mute','unconfirmed'],confirmed:['c-ok','confirmed'],cancelled:['c-mute','cancelled'],
+    'no reply - call':['c-acc','no reply · call'],pending:['c-info','pending']};
+  const [c,l]=map[s]||['c-mute',s]; return `<span class="chip ${c}">${l}</span>`;
+}
+const replyFeed = D.replies.map(([n,r])=>['5:02 PM',`<b>${n}</b> replied “${r}”`]);
+const steps = [
+  {name:'Resy goes down', title:'Rebuilt book', sub:`${D.records} records from 3 sources`, rows:D.s1,
+   lamp:'live', lampText:'RESY · OFFLINE SINCE 2:04 PM', mode:'Outage',
+   feed:[['2:06 PM','Manager turned on <b>Outage mode</b>'],['2:07 PM','Read 16 Resy emails, 1 printout, 2 voicemails'],['2:07 PM','Removed 1 duplicate email. Applied 1 cancel and 1 change.'],['2:08 PM','<b>2 table conflicts</b>: Aisha Rahman (6 at 8:00), Liam O’Brien (5 at 8:30)'],['2:08 PM','2 low-confidence bookings from voicemail only: verify by phone']]},
+  {name:'Confirm guests', title:'After SMS replies', sub:'16 confirmation texts sent', rows:D.s2,
+   lamp:'live', lampText:'RESY · OFFLINE SINCE 2:04 PM', mode:'Outage',
+   feed:[['4:40 PM','Sent 16 confirmation texts'],...replyFeed,['5:10 PM','3 guests with no reply moved to the staff call list']]},
+  {name:'Phone booking', title:'New booking by phone', sub:'Agent keeps a 10% walk-in buffer', rows:D.s3, highlight:'Leila Ahmadi',
+   lamp:'live', lampText:'RESY · OFFLINE SINCE 2:04 PM', mode:'Outage',
+   feed:[['5:20 PM','Leila Ahmadi called: party of 4 at 7:00 PM'],[ '5:20 PM',`Free table found: <b>${D.leila_table}</b>. Booked as <b>pending</b>.`],['5:20 PM','Read-back SMS sent to the guest'],['5:20 PM','Queued operation: create in Resy']]},
+  {name:'Resy comes back', title:'Resy is back', sub:'Online bookings start again at once', rows:D.s3, highlight:'Leila Ahmadi',
+   lamp:'ok', lampText:'RESY · ONLINE AGAIN AT 6:58 PM', mode:'Recovery',
+   feed:[['6:58 PM','Health check: Resy answers again'],['6:58 PM',`A web guest booked 4 at 7:00 PM in Resy (<span class="src">${D.web}</span>)`],['6:58 PM','4 queued operations wait for the sync']]},
+  {name:'Safe sync', title:'Sync report', sub:'Cancels first, then creates, each one checked', rows:D.s3, highlight:'Leila Ahmadi', sync:true,
+   lamp:'ok', lampText:'RESY · ONLINE · SYNCED', mode:'Recovery',
+   feed: D.ops.map(o=>['6:59 PM',`<span class="chip ${o.status==='synced'?'c-ok':o.status==='conflict'?'c-warn':'c-mute'}">${o.status}</span> ${o.kind} <b>${o.name}</b>: ${o.status==='skipped'?'Not in Resy. Nothing to cancel.':o.result}`]).concat([['6:59 PM','<b>0 double bookings.</b> 2 decisions for the host.']])}
+];
+let cur = 0;
+const $ = id => document.getElementById(id);
+function renderSteps(){
+  $('steps').innerHTML = steps.map((s,i)=>`<button type="button" class="step${i<cur?' done':''}" ${i===cur?'aria-current="step"':''} data-i="${i}"><span class="n">${i+1}</span>${s.name}</button>`).join('');
+}
+function render(){
+  const s = steps[cur];
+  renderSteps();
+  $('stepTitle').textContent = s.title; $('stepSub').textContent = s.sub;
+  const active = s.rows.filter(r=>r.status!=='cancelled');
+  const conflicts = s.sync ? D.ops.filter(o=>o.status==='conflict').length : active.filter(r=>r.conflict).length;
+  const stats = [['Active',active.length],['Confirmed',active.filter(r=>r.status==='confirmed').length],['Need a call',active.filter(r=>r.status==='no reply - call').length],['Conflicts',conflicts],['Double bookings',0]];
+  $('stats').innerHTML = stats.map(([k,v],i)=>`<div class="stat${i===4?' zero':''}"><span>${k}</span><b>${v}</b></div>`).join('');
+  $('covers').textContent = active.reduce((a,r)=>a+r.party,0) + ' guests · ' + active.length + ' tables';
+  $('book').tBodies[0].innerHTML = s.rows.map(r=>`<tr class="${r.name===s.highlight?'new':''}"><td class="num">${t12(r.time)}</td><td>${r.name}${r.conflict&&r.status!=='cancelled'?`<span class="note">${r.conflict}</span>`:''}${r.conf==='low'&&r.status!=='cancelled'?`<span class="note">Low confidence: verify</span>`:''}</td><td class="num">${r.party}</td><td class="num">${r.table||'—'}</td><td>${chip(r.status)}</td><td class="src">${r.src.join(', ')}</td></tr>`).join('');
+  $('feed').innerHTML = s.feed.slice().reverse().map(([t,k])=>`<li><time>${t}</time><span class="k">${k}</span></li>`).join('');
+  $('lamp').className = 'lamp ' + s.lamp; $('lampText').textContent = s.lampText; $('modeText').textContent = s.mode;
+  $('prev').disabled = cur===0; $('next').disabled = cur===steps.length-1;
+  $('next').textContent = cur===steps.length-1 ? 'Done' : 'Next: ' + steps[cur+1].name;
+}
+$('steps').addEventListener('click', e=>{ const b=e.target.closest('.step'); if(b){cur=+b.dataset.i; render();} });
+$('next').addEventListener('click', ()=>{ if(cur<steps.length-1){cur++; render();} });
+$('prev').addEventListener('click', ()=>{ if(cur>0){cur--; render();} });
+render();
+</script>
