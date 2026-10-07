@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: way-home-nyc
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: CONTACT_EMAIL
+        sync: false
+      - key: NYC_APP_TOKEN
+        sync: false
+      - key: BSKY_HANDLE
+        sync: false
+      - key: BSKY_APP_PASSWORD
+        sync: false

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Way Home NYC</title>
+<meta name="description" content="Live NYC street closures, traffic, events, 311, subway alerts and weather, with routes home scored against them.">
+<meta name="theme-color" content="#e8590c">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&family=Overpass+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/vendor/leaflet.css">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div class="demo-banner" id="demo-banner" hidden>Demo data: every closure, report and alert shown is invented. Run without <code>DEMO=1</code> for live feeds.</div>
+<header class="top">
+  <div class="brand"><span class="sign">LIVE</span><h1>Way Home NYC</h1></div>
+  <span class="clock" id="clock"></span>
+  <div class="sources" id="sources" aria-label="Feed status" aria-live="polite"></div>
+  <div class="row">
+    <label class="sr" for="zone">Jump to area</label>
+    <select class="btn" id="zone">
+      <option value="city">Citywide</option>
+      <option value="msg">Madison Square Garden</option>
+      <option value="canyon">Canyon of Heroes</option>
+      <option value="midtown">Midtown</option>
+      <option value="barclays">Barclays Center</option>
+    </select>
+  </div>
+</header>
+
+<main class="layout">
+  <div id="map" role="region" aria-label="Live map"></div>
+  <aside class="rail">
+    <div class="tabs" role="tablist" aria-label="Feeds">
+      <button class="tab" role="tab" id="tab-route" aria-controls="pane-route" data-pane="route" aria-selected="true">Route</button>
+      <button class="tab" role="tab" id="tab-closures" aria-controls="pane-closures" data-pane="closures" aria-selected="false">Closures<span class="n" id="n-closures"></span></button>
+      <button class="tab" role="tab" id="tab-events" aria-controls="pane-events" data-pane="events" aria-selected="false">Events<span class="n" id="n-events"></span></button>
+      <button class="tab" role="tab" id="tab-reports" aria-controls="pane-reports" data-pane="reports" aria-selected="false">311<span class="n" id="n-reports"></span></button>
+      <button class="tab" role="tab" id="tab-transit" aria-controls="pane-transit" data-pane="transit" aria-selected="false">Transit<span class="n" id="n-transit"></span></button>
+      <button class="tab" role="tab" id="tab-social" aria-controls="pane-social" data-pane="social" aria-selected="false">Social</button>
+    </div>
+    <div class="panes">
+      <section class="pane" id="pane-route" role="tabpanel" aria-labelledby="tab-route">
+        <h2>Plan the way home</h2>
+        <p class="hint">Pick a start and a destination by address or on the map. Each route is checked against today's closures, slow traffic and fresh 311 reports along its path.</p>
+
+        <div class="place" data-which="start">
+          <div class="field"><label for="start-q">Start</label>
+            <div class="combo"><input id="start-q" autocomplete="off" placeholder="Address or place"><ul class="suggest" id="start-suggest" hidden></ul></div></div>
+          <div class="row">
+            <button class="btn sm" data-pick="start">Pick on map</button>
+            <button class="btn sm" id="use-loc">Use my location</button>
+          </div>
+        </div>
+
+        <div class="place" data-which="home">
+          <div class="field"><label for="home-q">Destination</label>
+            <div class="combo"><input id="home-q" autocomplete="off" placeholder="Home address"><ul class="suggest" id="home-suggest" hidden></ul></div></div>
+          <div class="row">
+            <button class="btn sm" data-pick="home">Pick on map</button>
+            <button class="btn sm" id="swap">Swap</button>
+          </div>
+        </div>
+
+        <div class="row end">
+          <div class="field"><label for="mode">Travel by</label>
+            <select id="mode"><option value="car">Car or taxi</option><option value="foot">Walking</option><option value="bike">Bike</option></select></div>
+          <button class="btn primary" id="go">Find routes</button>
+        </div>
+        <p id="route-msg" class="hint" role="status"></p>
+        <div class="routes" id="routes"></div>
+
+        <h2>Map key</h2>
+        <div class="legend">
+          <span><i class="sw dash"></i>Construction closure</span>
+          <span><i class="sw" style="background:var(--bad)"></i>Traffic under 10 mph</span>
+          <span><i class="sw" style="background:var(--warn)"></i>10 to 20 mph</span>
+          <span><i class="sw" style="background:var(--ok)"></i>Over 20 mph</span>
+          <span><i class="sw c" style="background:var(--crowd)"></i>311 street noise (crowds)</span>
+          <span><i class="sw c" style="background:var(--work)"></i>311 street or signal</span>
+        </div>
+        <div class="layers" id="layers"></div>
+        <p class="hint">Routes come from OpenStreetMap routers, which don't know about today's closures. That's why each one is scored against the live feeds before it's ranked.</p>
+      </section>
+
+      <section class="pane" id="pane-closures" role="tabpanel" aria-labelledby="tab-closures" hidden>
+        <h2>Street closures today</h2>
+        <p class="hint">NYC DOT construction closures active today, nearest to the map center first.</p>
+        <div class="field"><label for="q-closures">Filter by street</label><input id="q-closures" placeholder="e.g. Broadway"></div>
+        <div class="list" id="list-closures"></div>
+      </section>
+
+      <section class="pane" id="pane-events" role="tabpanel" aria-labelledby="tab-events" hidden>
+        <h2>Permitted events, next 18 hours</h2>
+        <p class="hint">City-permitted parades, rallies, street fairs and shoots. Events that close streets come first.</p>
+        <div class="row end">
+          <div class="field"><label for="ev-boro">Borough</label>
+            <select id="ev-boro"><option value="">All</option><option>Manhattan</option><option>Brooklyn</option><option>Queens</option><option>Bronx</option><option>Staten Island</option></select></div>
+          <label class="check"><input type="checkbox" id="ev-closing"> Street closures only</label>
+        </div>
+        <div class="list" id="list-events"></div>
+      </section>
+
+      <section class="pane" id="pane-reports" role="tabpanel" aria-labelledby="tab-reports" hidden>
+        <h2>Recent 311 reports</h2>
+        <p class="hint">Street noise, blocked roads, signals and parking. Clusters of street-noise reports usually mean crowds.</p>
+        <p class="hint" id="reports-note"></p>
+        <div class="list" id="list-reports"></div>
+      </section>
+
+      <section class="pane" id="pane-transit" role="tabpanel" aria-labelledby="tab-transit" hidden>
+        <h2>Subway alerts</h2>
+        <div class="list" id="list-transit"></div>
+        <h2>Weather</h2>
+        <div id="weather"></div>
+      </section>
+
+      <section class="pane" id="pane-social" role="tabpanel" aria-labelledby="tab-social" hidden>
+        <h2>Public posts</h2>
+        <p class="hint">Recent public Bluesky posts. They're unverified, so treat them as clues and check official sources before changing your route.</p>
+        <form class="row end" id="social-form">
+          <div class="field"><label for="q-social">Search</label><input id="q-social" value="Knicks traffic"></div>
+          <button class="btn" type="submit">Search</button>
+        </form>
+        <div class="list" id="list-social"></div>
+        <h2>Official channels</h2>
+        <div class="links">
+          <a href="https://a858-nycnotify.nyc.gov/notifynyc/" target="_blank" rel="noopener">Notify NYC alerts sign-up</a>
+          <a href="https://www.nyc.gov/html/dot/html/motorist/weektraf.shtml" target="_blank" rel="noopener">NYC DOT traffic advisories</a>
+          <a href="https://www.mta.info/alerts" target="_blank" rel="noopener">MTA service alerts</a>
+          <a href="https://511ny.org/map" target="_blank" rel="noopener">511NY live traffic map</a>
+          <a href="https://x.com/NYC_DOT" target="_blank" rel="noopener">@NYC_DOT on X</a>
+          <a href="https://x.com/NotifyNYC" target="_blank" rel="noopener">@NotifyNYC on X</a>
+        </div>
+      </section>
+    </div>
+  </aside>
+</main>
+<script src="/vendor/leaflet.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
