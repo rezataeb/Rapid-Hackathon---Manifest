@@ -14,6 +14,8 @@ A live dashboard for getting around New York when big events close streets. One 
 
 The **Route** tab finds up to four routes (car, walking or bike) from OpenStreetMap routers and ranks them by how many closures, slow roads and 311 reports lie along each one.
 
+Product requirements: [docs/PRD_Way_Home.md](docs/PRD_Way_Home.md).
+
 ## How it works
 
 The server fetches every feed on its own schedule, keeps the last good copy if a source goes down, and pushes updates to open browsers over Server-Sent Events. Browsers never call the city's APIs directly, so there are no cross-origin problems and the feeds aren't hit once per visitor.
