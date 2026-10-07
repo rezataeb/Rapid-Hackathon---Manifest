@@ -15,6 +15,10 @@ streamlit run app.py
 Optional Twilio for real SMS: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`.
 With no keys, the app runs fully offline (rule extraction + mock SMS outbox).
 
+## Workflow
+
+See [docs/WORKFLOW.md](docs/WORKFLOW.md) for the diagrams of all 4 flows: Normal, Outage, Inbound, and Recovery.
+
 ## Files
 
 | File | Owner | Content |
